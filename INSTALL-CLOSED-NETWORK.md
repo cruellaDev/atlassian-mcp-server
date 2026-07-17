@@ -23,7 +23,7 @@ Claude Code  ──stdio──▶  mcp-atlassian  ──사내 HTTPS──▶  J
 - 통신 상대는 **사내 Jira/Confluence뿐**이다.
 - 인증은 **개인 PAT**(Personal Access Token)로 한다. 내 권한 그대로 동작한다 — 내가 못 보는 건 Claude도 못 본다.
 
-> **왜 공식 Atlassian 플러그인을 안 쓰나:** 공식은 Atlassian **Cloud 전용**이다. Data Center는 지원하지 않고, 계획도 없다. 자세한 근거는 `DC-PORTING.md` 섹션 5.
+> **왜 공식 Atlassian 플러그인을 안 쓰나:** 공식은 Atlassian **Cloud 전용**이다. Data Center는 지원하지 않고, 계획도 없다. 자세한 근거는 `HANDOVER.md` 섹션 2.
 
 ---
 
@@ -37,45 +37,89 @@ Claude Code  ──stdio──▶  mcp-atlassian  ──사내 HTTPS──▶  J
 | Jira DC | **8.14 이상** | Jira 우하단 또는 관리 → 시스템 정보 |
 | Confluence DC | **6.0 이상** | 동일 |
 | Claude Code | 설치돼 있을 것 | `claude --version` |
-| 반입 매체 | 사내 정책에 맞는 것 | 보안팀 |
+| **Artifactory PyPI 접근** | 있으면 설치가 한 줄로 끝난다 | 아래 |
 
 > **Jira가 8.14 미만이면 PAT 기능 자체가 없다.** 그 경우 섹션 7의 폴백을 봐라.
 
-### 먼저 물어볼 것 — 사내에 뭐가 있나
+### Artifactory 접근 먼저 확인하라 — 여기서 난이도가 갈린다
 
-**설치 방법이 여기서 완전히 갈린다.** 정보팀/인프라팀에 물어라:
+사내 Artifactory가 PyPI 리모트 저장소를 프록시한다. **되면 반입이 아예 필요 없다.**
 
-| 사내 인프라 | 설치 난이도 | 방법 |
-|---|---|---|
-| **사내 PyPI 미러** (Nexus / Artifactory) | 쉬움 | 섹션 2-A |
-| **사내 Docker 레지스트리** (Harbor 등) | 중간 | 섹션 2-B |
-| **둘 다 없음** (완전 폐쇄) | 어려움 | 섹션 2-C ← 대부분 여기 |
+```bash
+pip download --no-deps requests -d /tmp/t \
+  --index-url https://<artifactory호스트>/artifactory/api/pypi/<pypi-remote-repo>/simple
+```
+
+| 결과 | 다음 |
+|---|---|
+| 받아짐 | → **섹션 2** (한 줄로 끝난다) |
+| 401 / 403 | 인증 필요 — 섹션 2의 인증 항목 |
+| 연결 안 됨 / 404 | 저장소 키가 틀렸을 수 있다. 섹션 2의 "정확한 URL 알아내기" |
+| 정말 안 됨 | → 섹션 2-C 폴백 (휠 반입) |
 
 ---
 
-## 2-A. 사내 PyPI 미러가 있는 경우 (가장 쉬움)
+## 2. 설치 — Artifactory 경유 (주 경로)
+
+**사내 Artifactory가 PyPI 리모트 저장소를 프록시한다.** 즉 방화벽이 PyPI를 막아도
+Artifactory가 대신 받아다 준다. **반입이 필요 없다.**
 
 ```bash
-pipx install --index-url https://<사내미러>/simple mcp-atlassian
+pipx install --index-url https://<artifactory호스트>/artifactory/api/pypi/<pypi-remote-repo>/simple mcp-atlassian
 ```
 
-`pipx`가 없으면:
+`pipx`가 없으면 `pip install`로 바꿔도 된다.
+
+### 정확한 URL 알아내기
+
+`<pypi-remote-repo>` 자리에 들어갈 저장소 키는 회사마다 다르다. 확인 방법:
+
+- Artifactory UI → **Artifacts** → PyPI 타입 리모트 저장소 이름 확인 (`pypi`, `pypi-remote`, `pypi-virtual` 등)
+- 또는 UI의 **Set Me Up** 버튼 → 해당 저장소 선택 → **완성된 pip 명령을 그대로 복사**할 수 있다 ← 가장 확실
+
+> **virtual 저장소가 있으면 그걸 써라.** 보통 remote(외부 프록시) + local(사내 산출물)을 합쳐놓은 것이라 한 번에 해결된다.
+
+### 인증
+
+Artifactory는 보통 익명 접근을 막아둔다. 401이 나면:
+
 ```bash
-pip install --index-url https://<사내미러>/simple mcp-atlassian
+pip install --index-url https://<사용자>:<Artifactory토큰>@<호스트>/artifactory/api/pypi/<repo>/simple mcp-atlassian
 ```
 
-→ 섹션 3으로.
+매번 치기 싫으면 설정 파일에 박아둔다:
+
+```ini
+# Linux/mac: ~/.pip/pip.conf   |   Windows: %APPDATA%\pip\pip.ini
+[global]
+index-url = https://<사용자>:<토큰>@<호스트>/artifactory/api/pypi/<repo>/simple
+```
+
+> **토큰을 커밋하지 마라.** `pip.conf`는 로컬 파일이다. 섹션 9 참고.
+
+### 사내 인증서
+
+Artifactory가 사내 CA 인증서를 쓰면 SSL 오류가 날 수 있다:
+```bash
+pip install --cert /경로/사내CA.pem --index-url ... mcp-atlassian
+```
+사내 CA가 OS 신뢰 저장소에 등록돼 있으면 대개 그냥 된다.
+
+→ 되면 **섹션 3으로.** 안 되면 아래 폴백.
 
 ---
 
-## 2-B. 사내 Docker 레지스트리가 있는 경우
+## 2-B. 폴백 — Docker 레지스트리가 있는 경우
 
-인터넷 되는 PC에서:
+Artifactory PyPI 경로가 막혔고 사내 Docker 레지스트리가 있다면:
+
 ```bash
 docker pull ghcr.io/sooperset/mcp-atlassian:latest
 docker tag ghcr.io/sooperset/mcp-atlassian:latest <사내레지스트리>/mcp-atlassian:latest
 docker push <사내레지스트리>/mcp-atlassian:latest
 ```
+
+> Artifactory는 Docker 레지스트리도 겸할 수 있다. 인프라팀에 물어라.
 
 레지스트리도 인터넷이 안 되면 파일로:
 ```bash
@@ -88,9 +132,16 @@ docker load -i mcp-atlassian.tar                                          # 업�
 
 ---
 
-## 2-C. 완전 폐쇄망 — 휠 반입 (대부분 이 경우)
+## 2-C. 폴백 — 휠 반입 (최후 수단)
 
-`pipx install mcp-atlassian`은 PyPI를 때리므로 **방화벽에서 막힌다.** 미리 받아서 들고 들어가야 한다.
+> 🛑 **먼저 섹션 2를 시도하라.** 사내 Artifactory가 PyPI를 프록시하면 이 섹션은 **통째로 불필요하다.**
+>
+> 여기로 오는 경우는 셋뿐이다:
+> - Artifactory에 PyPI 리모트가 설정돼 있지 않음
+> - 해당 저장소에 접근 권한이 없음
+> - Artifactory 자체가 없는 다른 망에서 작업
+
+`pip install`이 PyPI를 직접 때리면 **방화벽에서 막힌다.** 미리 받아서 들고 들어가야 한다.
 
 ### ⚠️ 핵심 함정 — 플랫폼을 맞춰야 한다
 
@@ -329,7 +380,7 @@ SSL 오류가 **실제로 났을 때만** 추가하라:
 ├── .claude-plugin/
 │   └── plugin.json      ← 위 내용 (userConfig + mcpServers + skills)
 ├── skills/
-│   ├── (DC-PORTING.md 따라 이식한 공식 스킬들)
+│   ├── (HANDOVER.md 4번 표대로 이식한 공식 스킬들)
 │   └── onboarding/
 │       └── SKILL.md     ← 팀 온보딩용 자체 스킬
 ```
@@ -393,7 +444,11 @@ username + 비밀번호로 폴백한다:
 
 ---
 
-## 8. 보안팀 반입 심사 설명용
+## 8. 보안팀 설명용
+
+> Artifactory 경유 설치는 **신규 방화벽 허용도, 반입 매체도 필요 없다.**
+> 심사가 필요한지부터 확인하라 — 이미 승인된 사내 저장소를 쓰는 것뿐일 수 있다.
+> 아래는 심사를 요구받았을 때 쓸 자료다.
 
 | 항목 | 내용 |
 |---|---|
@@ -404,8 +459,12 @@ username + 비밀번호로 폴백한다:
 | 외부 통신 | **없음.** 통신 상대는 사내 Jira/Confluence뿐 |
 | 인증 | 사용자 **개인 PAT**. 사용자 권한을 그대로 상속 — 권한 상승 없음 |
 | 데이터 반출 | 없음. 조회 결과는 로컬 Claude Code로만 전달 |
-| 반입물 | Python 휠 113개 (약 26MB), 전부 PyPI 공개 패키지 |
+| 조달 경로 | **사내 Artifactory의 PyPI 리모트 저장소 경유** — 이미 승인된 경로다. 신규 외부 통신이 발생하지 않는다 |
 | 권한 통제 | `READ_ONLY_MODE`로 쓰기 전면 차단 가능. `JIRA_PROJECTS_FILTER`로 접근 프로젝트 제한 가능 |
+
+> **조달 경로가 심사에서 유리한 지점이다.** Artifactory 경유로 설치하면 반입 매체도, 신규 방화벽 허용도 필요 없다.
+> 이미 회사가 승인해 운영 중인 패키지 저장소를 쓰는 것뿐이다.
+> (휠 반입 폴백을 쓴 경우엔 이 줄을 "Python 휠 113개, 약 26MB, 전부 PyPI 공개 패키지"로 바꿔라.)
 
 > **주의:** Claude Code 자체가 조회 결과를 Anthropic API로 보낸다(모델 추론). 이건 mcp-atlassian이 아니라 Claude Code의 동작이며, **사내에서 Claude 사용이 이미 승인됐다는 전제**다. 승인 범위에 Jira/Confluence 내용이 포함되는지는 별도로 확인하라.
 
@@ -413,20 +472,21 @@ username + 비밀번호로 폴백한다:
 
 ## 9. 🔒 커밋 금지
 
-이 레포는 **공개 포크**다 (`github.com/cruellaDev/atlassian-mcp-server`, PUBLIC).
+**이 레포는 공개 포크다** (`github.com/cruellaDev/atlassian-mcp-server`, PUBLIC).
 
 ```
 절대 커밋 금지:
   PAT / 비밀번호 / 토큰          ← 유출 시 즉시 폐기·재발급
-  사내 Jira/Confluence URL·도메인·IP
+  Artifactory 토큰 / pip.conf    ← 인증정보가 URL에 박힌다. 특히 주의
+  사내 Jira/Confluence/Artifactory URL·도메인·IP
   프로젝트 키 / 스페이스 키 / 사번 / 실명 / 이메일
   커스텀 필드 ID
-  DC 버전
+  DC 버전 (인프라 핑거프린팅)
 ```
 
 커밋 전 확인:
 ```bash
-git diff --cached | grep -iE "PAT|token|password|jira\.|confluence\.|customfield_"
+git diff --cached | grep -iE "PAT|token|password|jira\.|confluence\.|artifactory|customfield_"
 ```
 걸리는 게 있으면 커밋하지 말고 물어라.
 
@@ -436,4 +496,12 @@ git diff --cached | grep -iE "PAT|token|password|jira\.|confluence\.|customfield
 
 ## 다음 단계
 
-설치가 끝났으면 **`DC-PORTING.md`** 로 가라. 공식 Atlassian 스킬 6개를 이 서버에 맞게 이식하는 방법이 있다.
+**설치가 끝났으면 이 레포의 [`HANDOVER.md`](./HANDOVER.md) 로 가라.** 거기에 전부 있다:
+
+- 이 레포가 뭐고 왜 이렇게 됐는지
+- 이식 규칙 (툴 이름·파라미터 대조표) — **재이식할 때 쓰는 표**
+- 이름 치환으로 안 끝나는 함정들 (cloudId, 통합검색, 에픽 연결, accountId)
+- 사람에게 물어야 할 것 목록
+
+> `skills/`는 **이미 이식돼 있다** (`dc-port` 브랜치). 툴 11개 실재 확인, 파라미터 전부 대조 완료.
+> 다만 사내 mcp-atlassian 버전이 다르면 이름이 다를 수 있으니 `/mcp` 목록과 대조하라.
