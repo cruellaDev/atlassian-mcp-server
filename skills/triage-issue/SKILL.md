@@ -68,7 +68,7 @@ Execute **multiple targeted searches** to catch duplicates that may use differen
 ```
 jira_search(
   jql='project = "PROJ" AND (text ~ "error signature" OR summary ~ "error signature") AND type = Bug ORDER BY created DESC',
-  fields=["summary", "description", "status", "resolution", "created", "updated", "assignee"],
+  fields="summary,description,status,resolution,created,updated,assignee",
   limit=20
 )
 ```
@@ -77,7 +77,7 @@ jira_search(
 ```
 jira_search(
   jql='project = "PROJ" AND text ~ "component keywords" AND type = Bug ORDER BY updated DESC',
-  fields=["summary", "description", "status", "resolution", "created", "updated", "assignee"],
+  fields="summary,description,status,resolution,created,updated,assignee",
   limit=20
 )
 ```
@@ -86,7 +86,7 @@ jira_search(
 ```
 jira_search(
   jql='project = "PROJ" AND summary ~ "symptom keywords" AND type = Bug ORDER BY priority DESC, updated DESC',
-  fields=["summary", "description", "status", "resolution", "created", "updated", "assignee"],
+  fields="summary,description,status,resolution,created,updated,assignee",
   limit=20
 )
 ```
@@ -295,9 +295,7 @@ jira_create_issue(
   issue_type="Bug",
   summary="[Clear, specific summary - see below]",
   description="[Detailed description - see below]",
-  additional_fields={
-    "priority": {"name": "Medium"}  # Adjust based on user input severity assessment
-  }
+  additional_fields='{"priority": {"name": "Medium"}}'   # JSON 문자열이다. 딕셔너리가 아니다
 )
 ```
 
@@ -516,10 +514,7 @@ Please provide these values so I can create the issue.
 ```
 jira_create_issue(
   ...existing parameters...,
-  additional_fields={
-    "priority": {"name": "High"},
-    "customfield_10001": {"value": "Production"}
-  }
+  additional_fields='{"priority": {"name": "High"}, "customfield_10001": {"value": "Production"}}'
 )
 ```
 

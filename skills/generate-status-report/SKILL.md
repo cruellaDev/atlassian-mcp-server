@@ -44,7 +44,7 @@ Clarify these details:
 
 **Report destination:**
 - **ALWAYS ASK** if not specified: "Would you like me to publish this report to Confluence? If so, which space should I use?"
-- If user says yes: Ask for space name or offer to list available spaces
+- If user says yes: **스페이스 키를 물어라** (예: "ENG"). mcp-atlassian에는 스페이스 목록 조회 툴이 없으므로 대신 나열해줄 수 없다. Confluence URL에 들어있다: `/display/<SPACEKEY>/...`
 - Determine: New page or update existing page?
 - Ask about parent page if creating under a specific section
 
@@ -221,11 +221,11 @@ confluence_get_page(
 
 2. Update the page with new content:
 ```
-updateConfluencePage(
+confluence_update_page(
     page_id="123456",
-    body="[updated report content]",
-    convert_to_markdown=True,
-    versionMessage="Updated with latest status - Dec 8, 2025"
+    title="[Project Name] - Status Report - [Date]",
+    content="[updated report content]",
+    version_comment="Updated with latest status - Dec 8, 2025"
 )
 ```
 

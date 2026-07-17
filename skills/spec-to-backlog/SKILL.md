@@ -397,7 +397,7 @@ https://[사내jira]/browse/PROJ-123
 7. PROJ-130 - Write authentication tests and documentation
    https://[사내jira]/browse/PROJ-130
 
-**Source:** https://[사내confluence]/display/SPECS/pages/123456
+**Source:** https://[사내confluence]/pages/viewpage.action?pageId=123456
 
 **Next Steps:**
 - Review tickets in Jira for accuracy and completeness
@@ -440,9 +440,7 @@ https://[사내jira]/browse/PROJ-123
 
 3. Include in `additional_fields` when creating:
    ```
-   additional_fields={
-     "priority": {"name": "High"}
-   }
+   additional_fields='{"priority": {"name": "High"}}'
    ```
 
 ### Large Specifications

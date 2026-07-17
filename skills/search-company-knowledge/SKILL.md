@@ -262,7 +262,7 @@ Always include links to source materials so users can explore further.
 
 **For Confluence pages:**
 ```
-**Source:** [Page Title](https://[사내confluence]/display/SPACE/pages/123456)
+**Source:** [Page Title](https://[사내confluence]/pages/viewpage.action?pageId=123456)
 ```
 
 **For Jira issues:**
@@ -277,8 +277,8 @@ Always include links to source materials so users can explore further.
 ## Sources
 
 **Confluence Documentation:**
-- [Stratus Architecture Guide](https://[사내confluence]/display/DOCS/pages/12345)
-- [Minion Configuration](https://[사내confluence]/display/DEVOPS/pages/67890)
+- [Stratus Architecture Guide](https://[사내confluence]/pages/viewpage.action?pageId=12345)
+- [Minion Configuration](https://[사내confluence]/pages/viewpage.action?pageId=67890)
 
 **Jira Issues:**
 - [PROJ-145](https://[사내jira]/browse/PROJ-145) - Minion scaling implementation

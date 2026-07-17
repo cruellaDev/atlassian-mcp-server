@@ -325,7 +325,7 @@ Use action verbs and be specific:
 Product Planning Meeting - December 3, 2025
 Discussed Q1 roadmap priorities and new feature requirements
 
-**Source:** https://[사내confluence]/display/TEAM/pages/12345
+**Source:** https://[사내confluence]/pages/viewpage.action?pageId=12345
 
 **Original Note:**
 > @Sarah to create user stories for chat feature
