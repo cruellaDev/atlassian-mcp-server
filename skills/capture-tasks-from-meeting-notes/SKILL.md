@@ -1,6 +1,6 @@
 ---
 name: capture-tasks-from-meeting-notes
-description: "Analyze meeting notes to find action items and create Jira tasks for assigned work. When an agent needs to: (1) Create Jira tasks or tickets from meeting notes, (2) Extract or find action items from notes or Confluence pages, (3) Parse meeting notes for assigned tasks, or (4) Analyze notes and generate tasks for team members. Identifies assignees, looks up account IDs, and creates tasks with proper context."
+description: "Analyze meeting notes to find action items and create Jira tasks for assigned work. When an agent needs to: (1) Create Jira tasks or tickets from meeting notes, (2) Extract or find action items from notes or Confluence pages, (3) Parse meeting notes for assigned tasks, or (4) Analyze notes and generate tasks for team members. Identifies assignees, confirms they exist in Jira, and creates tasks with proper context."
 ---
 
 # Capture Tasks from Meeting Notes
@@ -10,7 +10,7 @@ meeting notes, action items, create tasks, create tickets, extract tasks, parse 
 
 ## Overview
 
-Automatically extract action items from meeting notes and create Jira tasks with proper assignees. This skill parses unstructured meeting notes (from Confluence or pasted text), identifies action items with assignees, looks up Jira account IDs, and creates tasks—eliminating the tedious post-meeting ticket creation process.
+Automatically extract action items from meeting notes and create Jira tasks with proper assignees. This skill parses unstructured meeting notes (from Confluence or pasted text), identifies action items with assignees, confirms assignees exist in Jira, and creates tasks—eliminating the tedious post-meeting ticket creation process.
 
 **Use this skill when:** Users have meeting notes with action items that need to become Jira tasks.
 
@@ -29,17 +29,18 @@ Obtain the meeting notes from the user.
 If user provides a Confluence URL:
 
 ```
-getConfluencePage(
-  cloudId="...",
-  pageId="[extracted from URL]",
-  contentFormat="markdown"
+confluence_get_page(
+  page_id="[extracted from URL]",
+  convert_to_markdown=True
 )
 ```
 
-**URL patterns:**
-- `https://[site].atlassian.net/wiki/spaces/[SPACE]/pages/[PAGE_ID]/[title]`
-- Extract PAGE_ID from the numeric portion
-- Get cloudId from site name or use `getAccessibleAtlassianResources`
+**URL patterns (Data Center):**
+- `https://[사내confluence]/pages/viewpage.action?pageId=[PAGE_ID]` → PAGE_ID가 그대로 보인다
+- `https://[사내confluence]/display/[SPACE]/[Page+Title]` → **페이지 ID가 URL에 없다.**
+  이 경우 `confluence_get_page(title="Page Title", space_key="SPACE")` 로 제목과 스페이스 키로 조회한다.
+
+> Cloud의 `[site].atlassian.net/wiki/spaces/...` 형태가 아니다. cloudId도 필요 없다 — 서버 주소가 설정에 박혀 있다.
 
 #### Option B: Pasted Text
 
@@ -148,29 +149,33 @@ Before looking up users or creating tasks, identify the Jira project.
 
 #### If User is Unsure
 
-Call `getVisibleJiraProjects` to show options:
+Call `jira_get_all_projects` to show options:
 
 ```
-getVisibleJiraProjects(
-  cloudId="...",
-  action="create"
-)
+jira_get_all_projects()
+
+# 주의: Cloud의 action="create" 필터가 없다. 전체 프로젝트가 반환되므로
+# 생성 권한이 없는 프로젝트가 섞일 수 있다. 사용자에게 확인받아라.
 ```
 
 Present: "I found these projects you can create tasks in: PROJ (Project Alpha), PRODUCT (Product Team), ENG (Engineering)"
 
 ---
 
-### Step 4: Lookup Account IDs
+### Step 4: 담당자 확인
 
-For each assignee name, find their Jira account ID.
+각 담당자 이름이 Jira에 실재하는지, 동명이인이 없는지 확인한다.
+
+> **Data Center 주의:** DC에는 `accountId`가 없다. 사용자는 **username / userKey**로 식별된다.
+> 다만 `jira_create_issue(assignee=...)`는 이메일·표시이름·ID를 모두 받아 내부에서 해석하므로,
+> **ID를 따로 추출해 넘길 필요가 없다.** 이 단계의 목적은 ID 획득이 아니라 **실재 확인과 동명이인 판별**이다.
 
 #### Lookup Process
 
 ```
-lookupJiraAccountId(
-  cloudId="...",
-  searchString="[assignee name]"
+jira_search_assignable_users(
+  query="[assignee name]",
+  project_key="PROJ"
 )
 ```
 
@@ -185,7 +190,7 @@ lookupJiraAccountId(
 **Scenario A: Exact Match (1 result)**
 ```
 ✅ Found: Sarah Johnson (sarah.johnson@company.com)
-→ Use accountId from result
+→ 그 이름/이메일을 그대로 assignee 에 넘긴다
 ```
 
 **Scenario B: No Match (0 results)**
@@ -262,9 +267,8 @@ Once confirmed, create each Jira task.
 Before creating tasks, check what issue types are available in the project:
 
 ```
-getJiraProjectIssueTypesMetadata(
-  cloudId="...",
-  projectIdOrKey="PROJ"
+jira_get_project_issue_types(
+  project_key="PROJ"
 )
 ```
 
@@ -277,13 +281,12 @@ getJiraProjectIssueTypesMetadata(
 #### For Each Action Item
 
 ```
-createJiraIssue(
-  cloudId="...",
-  projectKey="PROJ",
-  issueTypeName="[Task or available type]",
+jira_create_issue(
+  project_key="PROJ",
+  issue_type="[Task or available type]",
   summary="[Task description]",
   description="[Full description with context]",
-  assignee_account_id="[looked up account ID]"
+  assignee="[담당자 이름 또는 이메일 — 그대로 넘기면 서버가 해석한다]"
 )
 ```
 
@@ -322,7 +325,7 @@ Use action verbs and be specific:
 Product Planning Meeting - December 3, 2025
 Discussed Q1 roadmap priorities and new feature requirements
 
-**Source:** https://yoursite.atlassian.net/wiki/spaces/TEAM/pages/12345
+**Source:** https://[사내confluence]/display/TEAM/pages/12345
 
 **Original Note:**
 > @Sarah to create user stories for chat feature
@@ -340,11 +343,11 @@ After all tasks are created, present a comprehensive summary.
 
 1. [PROJ-123] - [Task summary]
    Assigned to: [Name]
-   https://yoursite.atlassian.net/browse/PROJ-123
+   https://[사내jira]/browse/PROJ-123
 
 2. [PROJ-124] - [Task summary]
    Assigned to: [Name]
-   https://yoursite.atlassian.net/browse/PROJ-124
+   https://[사내jira]/browse/PROJ-124
 
 [...continue for all created tasks...]
 
@@ -484,7 +487,7 @@ If the same person is mentioned different ways:
 Notes mention: @sarah, Sarah, Sarah J.
 
 These likely refer to the same person. I'll look up "Sarah" once and use 
-that account ID for all three mentions. Is that correct?
+that same user for all three mentions. Is that correct?
 ```
 
 ---
@@ -655,9 +658,9 @@ Action Items:
 
 ## Quick Reference
 
-**Primary tool:** `getConfluencePage` (if URL) or use pasted text  
-**Account lookup:** `lookupJiraAccountId(searchString)`  
-**Task creation:** `createJiraIssue` with `assignee_account_id`  
+**Primary tool:** `confluence_get_page` (if URL) or use pasted text  
+**Account lookup:** `jira_search_assignable_users(query, project_key)`  
+**Task creation:** `jira_create_issue` with `assignee` (이메일·이름 그대로 가능)  
 
 **Action patterns to look for:**
 - `@Name to/will/should X`

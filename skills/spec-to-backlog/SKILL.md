@@ -31,17 +31,17 @@ When triggered, obtain the Confluence page content:
 
 ### If user provides a Confluence URL:
 
-Extract the cloud ID and page ID from the URL pattern:
-- Standard format: `https://[site].atlassian.net/wiki/spaces/[SPACE]/pages/[PAGE_ID]/[title]`
-- The cloud ID can be extracted from `[site].atlassian.net` or by calling `getAccessibleAtlassianResources`
-- The page ID is the numeric value in the URL path
+Extract the page ID from the URL pattern **(Data Center)**:
+- `https://[사내confluence]/pages/viewpage.action?pageId=[PAGE_ID]` → PAGE_ID가 그대로 보인다
+- `https://[사내confluence]/display/[SPACE]/[Page+Title]` → 페이지 ID가 없다. 제목·스페이스로 조회한다.
+
+> cloudId는 필요 없다. Data Center에는 그 개념이 없고, 서버 주소는 설정에 박혀 있다.
 
 ### If user provides only a page title or description:
 
-Use the `search` tool to find the page:
+`confluence_search`로 페이지를 찾는다:
 ```
-search(
-  cloudId="...",
+confluence_search(
   query="type=page AND title~'[search terms]'"
 )
 ```
@@ -50,12 +50,11 @@ If multiple pages match, ask the user to clarify which one to use.
 
 ### Fetch the page:
 
-Call `getConfluencePage` with the cloudId and pageId:
+`confluence_get_page`를 페이지 ID로 호출한다:
 ```
-getConfluencePage(
-  cloudId="...",
-  pageId="123456",
-  contentFormat="markdown"
+confluence_get_page(
+  page_id="123456",
+  convert_to_markdown=True
 )
 ```
 
@@ -71,22 +70,21 @@ This returns the page content in Markdown format, which you'll analyze in Step 3
 "Which Jira project should I create these tickets in? Please provide the project key (e.g., PROJ, ENG, PRODUCT)."
 
 ### If user is unsure:
-Call `getVisibleJiraProjects` to show available projects:
+Call `jira_get_all_projects` to show available projects:
 ```
-getVisibleJiraProjects(
-  cloudId="...",
-  action="create"
-)
+jira_get_all_projects()
+
+# 주의: Cloud의 action="create" 필터가 없다. 전체 프로젝트가 반환되므로
+# 생성 권한이 없는 프로젝트가 섞일 수 있다. 사용자에게 확인받아라.
 ```
 
 Present the list: "I found these projects you can create issues in: PROJ (Project Alpha), ENG (Engineering), PRODUCT (Product Team)."
 
 ### Once you have the project key:
-Call `getJiraProjectIssueTypesMetadata` to understand what issue types are available:
+Call `jira_get_project_issue_types` to understand what issue types are available:
 ```
-getJiraProjectIssueTypesMetadata(
-  cloudId="...",
-  projectIdOrKey="PROJ"
+jira_get_project_issue_types(
+  project_key="PROJ"
 )
 ```
 
@@ -218,13 +216,12 @@ If user requests changes, adjust the breakdown and re-present.
 
 ### Create the Epic:
 
-Call `createJiraIssue` with:
+Call `jira_create_issue` with:
 
 ```
-createJiraIssue(
-  cloudId="...",
-  projectKey="PROJ",
-  issueTypeName="Epic",
+jira_create_issue(
+  project_key="PROJ",
+  issue_type="Epic",
   summary="[Epic Summary from Step 3]",
   description="[Epic Description - see below]"
 )
@@ -265,7 +262,7 @@ The response will include the Epic's key (e.g., "PROJ-123"). **Save this key**�
 {
   "key": "PROJ-123",
   "id": "10001",
-  "self": "https://yoursite.atlassian.net/rest/api/3/issue/10001"
+  "self": "https://[사내jira]/rest/api/2/issue/10001"
 }
 ```
 
@@ -286,18 +283,29 @@ Now create each implementation task as a child ticket linked to the Epic.
 - If the task involves technical/infrastructure work → use "Task" (if available)
 - Otherwise → use the default child issue type from Step 2
 
-Call `createJiraIssue` with:
+Call `jira_create_issue` with:
 
 ```
-createJiraIssue(
-  cloudId="...",
-  projectKey="PROJ",
-  issueTypeName="[Story/Task/Bug based on task content]",
+jira_create_issue(
+  project_key="PROJ",
+  issue_type="[Story/Task/Bug based on task content]",
   summary="[Task Summary]",
-  description="[Task Description - see below]",
-  parent="PROJ-123"  # The Epic key from Step 5
+  description="[Task Description - see below]"
 )
 ```
+
+> **Data Center 주의:** `jira_create_issue`에는 `parent` 파라미터가 없다.
+> 티켓을 만든 **다음에** 별도로 에픽에 연결한다 — 호출이 두 번이다.
+>
+> ```
+> jira_link_to_epic(
+>   issue_key="[방금 생성된 티켓 키]",
+>   epic_key="PROJ-123"    # Step 5의 에픽 키
+> )
+> ```
+>
+> 티켓마다 생성 → 연결 순으로 진행하라. 연결에 실패하면 티켓은 이미 만들어진 상태이므로,
+> **어느 티켓이 연결 안 됐는지 사용자에게 반드시 알려라.** 조용히 넘어가면 고아 티켓이 남는다.
 
 **Example issue type selection:**
 - "Fix authentication timeout bug" → Use "Bug"
@@ -364,32 +372,32 @@ After all tickets are created, present a comprehensive summary:
 ✅ Backlog created successfully!
 
 **Epic:** PROJ-123 - User Authentication System
-https://yoursite.atlassian.net/browse/PROJ-123
+https://[사내jira]/browse/PROJ-123
 
 **Implementation Tickets (7):**
 
 1. PROJ-124 - Design authentication database schema
-   https://yoursite.atlassian.net/browse/PROJ-124
+   https://[사내jira]/browse/PROJ-124
 
 2. PROJ-125 - Implement user registration API endpoint
-   https://yoursite.atlassian.net/browse/PROJ-125
+   https://[사내jira]/browse/PROJ-125
 
 3. PROJ-126 - Implement user login API endpoint
-   https://yoursite.atlassian.net/browse/PROJ-126
+   https://[사내jira]/browse/PROJ-126
 
 4. PROJ-127 - Build login form UI components
-   https://yoursite.atlassian.net/browse/PROJ-127
+   https://[사내jira]/browse/PROJ-127
 
 5. PROJ-128 - Build registration form UI components
-   https://yoursite.atlassian.net/browse/PROJ-128
+   https://[사내jira]/browse/PROJ-128
 
 6. PROJ-129 - Add authentication integration to existing features
-   https://yoursite.atlassian.net/browse/PROJ-129
+   https://[사내jira]/browse/PROJ-129
 
 7. PROJ-130 - Write authentication tests and documentation
-   https://yoursite.atlassian.net/browse/PROJ-130
+   https://[사내jira]/browse/PROJ-130
 
-**Source:** https://yoursite.atlassian.net/wiki/spaces/SPECS/pages/123456
+**Source:** https://[사내confluence]/display/SPECS/pages/123456
 
 **Next Steps:**
 - Review tickets in Jira for accuracy and completeness
@@ -420,12 +428,11 @@ https://yoursite.atlassian.net/browse/PROJ-123
 ### Custom Required Fields
 
 **If ticket creation fails due to required fields:**
-1. Use `getJiraIssueTypeMetaWithFields` to identify what fields are required:
+1. Use `jira_get_create_fields` to identify what fields are required:
    ```
-   getJiraIssueTypeMetaWithFields(
-     cloudId="...",
-     projectIdOrKey="PROJ",
-     issueTypeId="10001"
+   jira_get_create_fields(
+     project_key="PROJ",
+     issue_type_id="10001"
    )
    ```
 
@@ -461,9 +468,9 @@ https://yoursite.atlassian.net/browse/PROJ-123
 
 ### Failed API Calls
 
-**If `createJiraIssue` fails:**
+**If `jira_create_issue` fails:**
 1. Check the error message for specific issues (permissions, required fields, invalid values)
-2. Use `getJiraProjectIssueTypesMetadata` to verify issue type availability
+2. Use `jira_get_project_issue_types` to verify issue type availability
 3. Inform user: "I encountered an error creating tickets: [error message]. This might be due to project permissions or required fields."
 
 ---

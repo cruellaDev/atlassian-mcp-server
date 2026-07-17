@@ -246,7 +246,7 @@ Don't rely on a single search. Run 2-3 searches with different angles:
 
 ### Limit Results
 
-- Use `maxResults=20` for initial searches
+- Use `limit=20` for initial searches
 - Don't overwhelm with 100+ results
 - Focus on top 10-15 most relevant
 

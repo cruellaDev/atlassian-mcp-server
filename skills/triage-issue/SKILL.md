@@ -66,31 +66,28 @@ Execute **multiple targeted searches** to catch duplicates that may use differen
 
 **Search 1: Error-focused**
 ```
-searchJiraIssuesUsingJql(
-  cloudId="...",
+jira_search(
   jql='project = "PROJ" AND (text ~ "error signature" OR summary ~ "error signature") AND type = Bug ORDER BY created DESC',
   fields=["summary", "description", "status", "resolution", "created", "updated", "assignee"],
-  maxResults=20
+  limit=20
 )
 ```
 
 **Search 2: Component-focused**
 ```
-searchJiraIssuesUsingJql(
-  cloudId="...",
+jira_search(
   jql='project = "PROJ" AND text ~ "component keywords" AND type = Bug ORDER BY updated DESC',
   fields=["summary", "description", "status", "resolution", "created", "updated", "assignee"],
-  maxResults=20
+  limit=20
 )
 ```
 
 **Search 3: Symptom-focused**
 ```
-searchJiraIssuesUsingJql(
-  cloudId="...",
+jira_search(
   jql='project = "PROJ" AND summary ~ "symptom keywords" AND type = Bug ORDER BY priority DESC, updated DESC',
   fields=["summary", "description", "status", "resolution", "created", "updated", "assignee"],
-  maxResults=20
+  limit=20
 )
 ```
 
@@ -169,7 +166,7 @@ I found a very similar issue already reported:
 **PROJ-456** - Connection timeout during mobile login
 Status: Open | Priority: High | Created: 3 days ago
 Assignee: @john.doe
-https://yoursite.atlassian.net/browse/PROJ-456
+https://[사내jira]/browse/PROJ-456
 
 **Similarity:**
 - Same error: "Connection timeout"
@@ -196,11 +193,11 @@ I found 2 potentially related issues:
 
 **1. PROJ-789** - Mobile app authentication failures
 Status: Resolved | Fixed: 2 weeks ago | Fixed by: @jane.smith
-https://yoursite.atlassian.net/browse/PROJ-789
+https://[사내jira]/browse/PROJ-789
 
 **2. PROJ-234** - Login timeout on slow connections
 Status: Open | Priority: Medium | Created: 1 month ago
-https://yoursite.atlassian.net/browse/PROJ-234
+https://[사내jira]/browse/PROJ-234
 
 **Assessment:** Your error seems related but has unique aspects
 
@@ -240,18 +237,16 @@ If user wants to add to existing issue:
 
 **Fetch the full issue first** to understand context:
 ```
-getJiraIssue(
-  cloudId="...",
-  issueIdOrKey="PROJ-456"
+jira_get_issue(
+  issue_key="PROJ-456"
 )
 ```
 
 **Then add the comment:**
 ```
-addCommentToJiraIssue(
-  cloudId="...",
-  issueIdOrKey="PROJ-456",
-  commentBody="[formatted comment - see below]"
+jira_add_comment(
+  issue_key="PROJ-456",
+  body="[formatted comment - see below]"
 )
 ```
 
@@ -283,9 +278,8 @@ If user wants to create new issue:
 
 **First, check available issue types:**
 ```
-getJiraProjectIssueTypesMetadata(
-  cloudId="...",
-  projectIdOrKey="PROJ"
+jira_get_project_issue_types(
+  project_key="PROJ"
 )
 ```
 
@@ -296,10 +290,9 @@ getJiraProjectIssueTypesMetadata(
 
 **Create the issue:**
 ```
-createJiraIssue(
-  cloudId="...",
-  projectKey="PROJ",
-  issueTypeName="Bug",
+jira_create_issue(
+  project_key="PROJ",
+  issue_type="Bug",
   summary="[Clear, specific summary - see below]",
   description="[Detailed description - see below]",
   additional_fields={
@@ -372,7 +365,7 @@ After taking action, confirm what was done.
 ✅ **Comment Added Successfully**
 
 Added details to existing issue: **PROJ-456**
-https://yoursite.atlassian.net/browse/PROJ-456
+https://[사내jira]/browse/PROJ-456
 
 **What I included:**
 - Your error details
@@ -391,7 +384,7 @@ https://yoursite.atlassian.net/browse/PROJ-456
 ✅ **New Issue Created**
 
 **PROJ-890** - Mobile Login: Connection timeout during authentication
-https://yoursite.atlassian.net/browse/PROJ-890
+https://[사내jira]/browse/PROJ-890
 
 Type: Bug | Priority: Medium | Status: Open
 
@@ -486,7 +479,7 @@ This looks like it might be a regression of a previously fixed issue:
 **PROJ-567** - [Same issue description]
 Status: Resolved (Fixed) | Fixed: 3 months ago | Fixed by: @jane.smith
 Resolution: [Brief description of fix]
-https://yoursite.atlassian.net/browse/PROJ-567
+https://[사내jira]/browse/PROJ-567
 
 **This suggests:**
 - The original fix may not have fully addressed the root cause
@@ -504,10 +497,9 @@ If creating an issue fails due to required fields:
 
 1. **Check what fields are required:**
 ```
-getJiraIssueTypeMetaWithFields(
-  cloudId="...",
-  projectIdOrKey="PROJ",
-  issueTypeId="10001"
+jira_get_create_fields(
+  project_key="PROJ",
+  issue_type_id="10001"
 )
 ```
 
@@ -522,7 +514,7 @@ Please provide these values so I can create the issue.
 
 3. **Retry with additional fields:**
 ```
-createJiraIssue(
+jira_create_issue(
   ...existing parameters...,
   additional_fields={
     "priority": {"name": "High"},
@@ -630,7 +622,7 @@ Stack trace: [full stack trace]
 ✅ New Issue Created
 
 PROJ-890 - Payment API: NullPointerException in refund processing
-https://yoursite.atlassian.net/browse/PROJ-890
+https://[사내jira]/browse/PROJ-890
 
 References related issue PROJ-789 for context.
 ```
@@ -655,7 +647,7 @@ Users can't upload files larger than 5MB, getting "Upload failed" error
 ✅ New Issue Created (Possible Regression)
 
 PROJ-891 - File Upload: Upload failed for files >5MB (Regression?)
-https://yoursite.atlassian.net/browse/PROJ-891
+https://[사내jira]/browse/PROJ-891
 
 This may be a regression of PROJ-234, which was resolved 2 months ago.
 Issue includes reference to original fix for investigation.
@@ -684,13 +676,13 @@ This skill is for **triaging bugs and errors only**. Do NOT use for:
 
 **Primary workflow:** Extract → Search → Analyze → Present → Execute → Confirm
 
-**Search tool:** `searchJiraIssuesUsingJql(cloudId, jql, fields, maxResults)`
+**Search tool:** `jira_search(jql, fields, limit)`
 
 **Action tools:**
-- `addCommentToJiraIssue(cloudId, issueIdOrKey, commentBody)` - Add to existing
-- `createJiraIssue(cloudId, projectKey, issueTypeName, summary, description)` - Create new
+- `jira_add_comment(issue_key, body)` - Add to existing
+- `jira_create_issue(project_key, summary, issue_type, description, additional_fields)` - Create new
 
-**Issue type:** Always prefer "Bug" for error reports, check with `getJiraProjectIssueTypesMetadata`
+**Issue type:** Always prefer "Bug" for error reports, check with `jira_get_project_issue_types(project_key)`
 
 **Remember:**
 - Multiple searches catch more duplicates

@@ -111,7 +111,7 @@ Users need to create accounts through our REST API. This endpoint will be used b
 - [ ] Unit tests cover happy path and error cases
 
 ## Resources
-- API Spec: https://company.atlassian.net/wiki/API-Design
+- API Spec: https://[사내jira]/wiki/API-Design
 - Related: AUTH-123 (Login endpoint)
 ```
 
@@ -145,7 +145,7 @@ The pagination offset calculation doesn't account for items with identical times
 - [ ] Performance impact < 5ms per query
 
 ## Resources
-- Bug Report: https://company.atlassian.net/wiki/BUG-456
+- Bug Report: https://[사내jira]/wiki/BUG-456
 - Related: SEARCH-789 (Original search implementation)
 ```
 
@@ -179,7 +179,7 @@ First step in database migration from PG12 to PG15. Need staging environment to 
 - [ ] Backup configured and tested (restore test)
 
 ## Resources
-- Migration RFC: https://company.atlassian.net/wiki/PG15-Migration
+- Migration RFC: https://[사내jira]/wiki/PG15-Migration
 - Infrastructure docs: https://wiki/Database-Setup
 - Parent Epic: INFRA-100
 ```

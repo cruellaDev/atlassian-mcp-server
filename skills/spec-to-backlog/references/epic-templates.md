@@ -43,7 +43,7 @@ Effective Epic descriptions provide context, goals, and success criteria. Use th
 Add comprehensive notification system supporting email and in-app notifications for user activity (comments, mentions, updates).
 
 ## Source Specification
-https://company.atlassian.net/wiki/spaces/PRODUCT/pages/123456/Notifications-Spec
+https://[사내confluence]/pages/viewpage.action?pageId=123456
 
 ## Business Value
 Users currently miss important updates, leading to delayed responses and reduced engagement. Notifications will increase daily active usage by an estimated 20% and improve user satisfaction scores.
@@ -113,7 +113,7 @@ Users currently miss important updates, leading to delayed responses and reduced
 Users experiencing intermittent payment failures during checkout, resulting in abandoned transactions and support tickets. Error rate spiked to 8% on Nov 15, up from baseline 0.5%.
 
 ## Source Documentation
-https://company.atlassian.net/wiki/spaces/ENG/pages/789012/Payment-Failure-Investigation
+https://[사내confluence]/pages/viewpage.action?pageId=789012
 
 ## Current Impact
 - **Severity**: Critical
@@ -183,7 +183,7 @@ Payment gateway timeouts due to insufficient timeout settings (5s) and no retry 
 Migrate primary database from PostgreSQL 12 to PostgreSQL 15 to leverage performance improvements and new features before PostgreSQL 12 EOL.
 
 ## Source Documentation
-https://company.atlassian.net/wiki/spaces/ENG/pages/345678/PG15-Migration-RFC
+https://[사내confluence]/pages/viewpage.action?pageId=345678
 
 ## Current State
 Running PostgreSQL 12.8 on AWS RDS with 2TB data, 50K queries/minute at peak. Some queries use deprecated features.
@@ -260,7 +260,7 @@ Must complete by October 2024 (1 month before PG12 EOL). Testing requires 3 week
 Launch v1 of public REST API enabling third-party developers to integrate with our platform for user management and resource access.
 
 ## Source Specification
-https://company.atlassian.net/wiki/spaces/API/pages/456789/Public-API-v1-Spec
+https://[사내confluence]/pages/viewpage.action?pageId=456789
 
 ## Use Cases
 - SaaS companies integrating our user management into their products
@@ -341,7 +341,7 @@ https://company.atlassian.net/wiki/spaces/API/pages/456789/Public-API-v1-Spec
 Redesign main analytics dashboard with modern UI framework, improved performance, and better mobile support while maintaining all existing functionality.
 
 ## Source Documentation
-https://company.atlassian.net/wiki/spaces/DESIGN/pages/567890/Dashboard-Redesign
+https://[사내confluence]/pages/viewpage.action?pageId=567890
 
 ## Current Pain Points
 - Slow initial load time (4-6 seconds)

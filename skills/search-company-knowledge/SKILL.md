@@ -42,38 +42,40 @@ Search across all available knowledge sources simultaneously for comprehensive c
 
 #### Option A: Cross-System Search (Recommended First)
 
-Use the **`search`** tool (Rovo Search) to search across Confluence and Jira at once:
+> **Data Center 주의:** Cloud의 Rovo `search` 툴(Confluence+Jira 통합 검색)은 **Data Center에 없다.**
+> 대신 두 툴을 **한 번에 병렬로** 호출하고 결과를 합친다. 목적은 동일하다.
 
 ```
-search(
-  cloudId="...",
-  query="[extracted search terms]"
+confluence_search(
+  query="text ~ '[extracted search terms]' OR title ~ '[extracted search terms]'"
+)
+jira_search(
+  jql="text ~ '[extracted search terms]' OR summary ~ '[extracted search terms]'"
 )
 ```
 
-**When to use:** 
+**두 호출을 반드시 같은 턴에 함께 보내라.** 순차로 하면 느리다.
+
+**When to use:**
 - Default approach for most queries
 - When you don't know which system has the information
 - Fastest way to get results from multiple sources
 
 **Example:**
 ```
-search(
-  cloudId="...",
-  query="Stratus minions"
-)
+confluence_search(query="text ~ 'Stratus minions' OR title ~ 'Stratus minions'")
+jira_search(jql="text ~ 'Stratus minions' OR summary ~ 'Stratus minions'")
 ```
 
 This returns results from both Confluence pages and Jira issues.
 
 #### Option B: Targeted Confluence Search
 
-Use **`searchConfluenceUsingCql`** when specifically searching Confluence:
+Use **`confluence_search`** when specifically searching Confluence:
 
 ```
-searchConfluenceUsingCql(
-  cloudId="...",
-  cql="text ~ 'search terms' OR title ~ 'search terms'"
+confluence_search(
+  query="text ~ 'search terms' OR title ~ 'search terms'"
 )
 ```
 
@@ -91,11 +93,10 @@ title ~ "deployment guide"
 
 #### Option C: Targeted Jira Search
 
-Use **`searchJiraIssuesUsingJql`** when specifically searching Jira:
+Use **`jira_search`** when specifically searching Jira:
 
 ```
-searchJiraIssuesUsingJql(
-  cloudId="...",
+jira_search(
   jql="text ~ 'search terms' OR summary ~ 'search terms'"
 )
 ```
@@ -131,10 +132,9 @@ After identifying relevant sources, fetch full content for comprehensive answers
 When search results reference Confluence pages:
 
 ```
-getConfluencePage(
-  cloudId="...",
-  pageId="[page ID from search results]",
-  contentFormat="markdown"
+confluence_get_page(
+  page_id="[page ID from search results]",
+  convert_to_markdown=True
 )
 ```
 
@@ -150,9 +150,8 @@ getConfluencePage(
 When search results reference Jira issues:
 
 ```
-getJiraIssue(
-  cloudId="...",
-  issueIdOrKey="PROJ-123"
+jira_get_issue(
+  issue_key="PROJ-123"
 )
 ```
 
@@ -263,14 +262,14 @@ Always include links to source materials so users can explore further.
 
 **For Confluence pages:**
 ```
-**Source:** [Page Title](https://yoursite.atlassian.net/wiki/spaces/SPACE/pages/123456)
+**Source:** [Page Title](https://[사내confluence]/display/SPACE/pages/123456)
 ```
 
 **For Jira issues:**
 ```
 **Related Tickets:**
-- [PROJ-123](https://yoursite.atlassian.net/browse/PROJ-123) - Brief description
-- [PROJ-456](https://yoursite.atlassian.net/browse/PROJ-456) - Brief description
+- [PROJ-123](https://[사내jira]/browse/PROJ-123) - Brief description
+- [PROJ-456](https://[사내jira]/browse/PROJ-456) - Brief description
 ```
 
 **Complete citation section:**
@@ -278,12 +277,12 @@ Always include links to source materials so users can explore further.
 ## Sources
 
 **Confluence Documentation:**
-- [Stratus Architecture Guide](https://yoursite.atlassian.net/wiki/spaces/DOCS/pages/12345)
-- [Minion Configuration](https://yoursite.atlassian.net/wiki/spaces/DEVOPS/pages/67890)
+- [Stratus Architecture Guide](https://[사내confluence]/display/DOCS/pages/12345)
+- [Minion Configuration](https://[사내confluence]/display/DEVOPS/pages/67890)
 
 **Jira Issues:**
-- [PROJ-145](https://yoursite.atlassian.net/browse/PROJ-145) - Minion scaling implementation
-- [PROJ-203](https://yoursite.atlassian.net/browse/PROJ-203) - Performance optimization
+- [PROJ-145](https://[사내jira]/browse/PROJ-145) - Minion scaling implementation
+- [PROJ-203](https://[사내jira]/browse/PROJ-203) - Performance optimization
 
 **Additional Resources:**
 - [Internal architecture doc link if found]
@@ -405,7 +404,7 @@ You may need to access these directly or check your permissions.
 **User:** "What are Stratus minions?"
 
 **Process:**
-1. Search: `search(cloudId="...", query="Stratus minions")`
+1. Search: `confluence_search(query="text ~ 'Stratus minions'")` + `jira_search(jql="text ~ 'Stratus minions'")` 병렬
 2. Find: Confluence page "Stratus Architecture" + 3 Jira tickets
 3. Fetch: Get full Confluence page content
 4. Synthesize: Combine architectural overview with implementation details from tickets
@@ -552,13 +551,13 @@ This skill is for **internal company knowledge only**. Do NOT use for:
 
 ## Quick Reference
 
-**Primary tool:** `search(cloudId, query)` - Use this first, always
+**Primary approach:** 크로스 검색 툴은 없다. 두 개를 **병렬로** 호출하고 결과를 합쳐라.
+- `confluence_search(query)` — query에 CQL을 넣는다
+- `jira_search(jql)`
 
 **Follow-up tools:**
-- `getConfluencePage(cloudId, pageId, contentFormat)` - Get full page content
-- `getJiraIssue(cloudId, issueIdOrKey)` - Get full issue details
-- `searchConfluenceUsingCql(cloudId, cql)` - Targeted Confluence search
-- `searchJiraIssuesUsingJql(cloudId, jql)` - Targeted Jira search
+- `confluence_get_page(page_id, convert_to_markdown=True)` - Get full page content
+- `jira_get_issue(issue_key, fields)` - Get full issue details
 
 **Answer structure:**
 1. Direct answer
