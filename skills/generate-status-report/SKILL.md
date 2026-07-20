@@ -44,13 +44,13 @@ Clarify these details:
 
 **Report destination:**
 - **ALWAYS ASK** if not specified: "Would you like me to publish this report to Confluence? If so, which space should I use?"
-- If user says yes: Ask for space name or offer to list available spaces
+- If user says yes: **스페이스 키를 물어라** (예: "ENG"). mcp-atlassian에는 스페이스 목록 조회 툴이 없으므로 대신 나열해줄 수 없다. Confluence URL에 들어있다: `/display/<SPACEKEY>/...`
 - Determine: New page or update existing page?
 - Ask about parent page if creating under a specific section
 
 ## Step 2: Query Jira
 
-Use the `searchJiraIssuesUsingJql` tool to fetch issues. Build JQL queries based on report needs.
+Use the `jira_search` tool to fetch issues. Build JQL queries based on report needs.
 
 ### Common Query Patterns
 
@@ -166,17 +166,15 @@ If user hasn't specified Confluence details yet, ask:
 - "Which Confluence space should I use?"
 - "Should this be nested under a specific parent page?"
 
-Use the `createConfluencePage` tool to publish the report.
+Use the `confluence_create_page` tool to publish the report.
 
 **Page creation:**
 ```
-createConfluencePage(
-    cloudId="[obtained from getConfluenceSpaces or URL]",
-    spaceId="[numerical space ID]",
+confluence_create_page(
+    space_key="[space KEY, e.g. 'ENG' — not a numerical ID]",
     title="[Project Name] - Status Report - [Date]",
-    body="[formatted report in Markdown]",
-    contentFormat="markdown",
-    parentId="[optional - parent page ID if nesting under another page]"
+    content="[formatted report in Markdown]",
+    parent_id="[optional - parent page ID if nesting under another page]"
 )
 ```
 
@@ -191,7 +189,7 @@ Write the report content in Markdown. The tool will convert it to Confluence for
 - Bullet points for lists
 - Bold (`**text**`) for emphasis
 - Tables for metrics if needed
-- Links to Jira issues: `[PROJ-123](https://yourinstance.atlassian.net/browse/PROJ-123)`
+- Links to Jira issues: `[PROJ-123](https://[사내jira]/browse/PROJ-123)`
 
 **Best practices:**
 - Include the report date prominently
@@ -203,7 +201,8 @@ Write the report content in Markdown. The tool will convert it to Confluence for
 
 If the user doesn't specify a Confluence space:
 
-1. Use `getConfluenceSpaces` to list available spaces
+1. 사용자에게 스페이스 키를 물어라 (mcp-atlassian에 스페이스 목록 조회 툴이 없다).
+   Confluence URL에 들어있다: `/display/<SPACEKEY>/...`
 2. Look for spaces related to the project (matching project name or key)
 3. If unsure, ask the user which space to use
 4. Default to creating in the most relevant team or project space
@@ -214,21 +213,19 @@ If updating an existing page instead of creating new:
 
 1. Get the current page content:
 ```
-getConfluencePage(
-    cloudId="...",
-    pageId="123456",
-    contentFormat="markdown"
+confluence_get_page(
+    page_id="123456",
+    convert_to_markdown=True
 )
 ```
 
 2. Update the page with new content:
 ```
-updateConfluencePage(
-    cloudId="...",
-    pageId="123456",
-    body="[updated report content]",
-    contentFormat="markdown",
-    versionMessage="Updated with latest status - Dec 8, 2025"
+confluence_update_page(
+    page_id="123456",
+    title="[Project Name] - Status Report - [Date]",
+    content="[updated report content]",
+    version_comment="Updated with latest status - Dec 8, 2025"
 )
 ```
 
@@ -245,31 +242,27 @@ updateConfluencePage(
 **Step 2 - Query Jira:**
 ```python
 # Find project key first
-searchJiraIssuesUsingJql(
-    cloudId="...",
+jira_search(
     jql='project = "PHOENIX" OR project = "PHX"',
-    maxResults=1
+    limit=1
 )
 
 # Query completed issues
-searchJiraIssuesUsingJql(
-    cloudId="...",
+jira_search(
     jql='project = "PHX" AND status = Done AND resolved >= -7d',
-    maxResults=50
+    limit=50
 )
 
 # Query blocked issues
-searchJiraIssuesUsingJql(
-    cloudId="...",
+jira_search(
     jql='project = "PHX" AND status = Blocked',
-    maxResults=50
+    limit=50
 )
 
 # Query in-progress high priority
-searchJiraIssuesUsingJql(
-    cloudId="...",
+jira_search(
     jql='project = "PHX" AND status IN ("In Progress", "In Review") AND priority IN (Highest, High)',
-    maxResults=50
+    limit=50
 )
 ```
 
@@ -283,16 +276,15 @@ Use Executive Summary Format from templates. Create concise report with metrics,
 
 **Step 5 - Publish:**
 ```python
-# Find appropriate space
-getConfluenceSpaces(cloudId="...")
+# 스페이스 키를 사용자에게 물어라.
+# mcp-atlassian에는 스페이스 목록 조회 툴이 없다 (getConfluenceSpaces 대응 없음).
+# 사용자가 아는 값이거나 Confluence URL에 들어있다: /display/<SPACEKEY>/...
 
 # Create page
-createConfluencePage(
-    cloudId="...",
-    spaceId="12345",
+confluence_create_page(
+    space_key="ENG",
     title="Project Phoenix - Weekly Status - Dec 3, 2025",
-    body="[formatted markdown report]",
-    contentFormat="markdown"
+    content="[formatted markdown report]"
 )
 ```
 
